@@ -131,6 +131,15 @@ class Arrecadacao {
 			}
 
 			$retorno = array(); 
+			$retorno['produto'] = $this->produto;
+			$retorno['segmento'] = $this->segmento;
+			$retorno['indicador_valor'] = $this->indicador_valor;
+			$retorno['dv'] = $this->dv;
+			$retorno['valor'] = $this->valor;
+			$retorno['id_empresa'] = $this->id_empresa;
+			$retorno['campo_livre'] = $this->campo_livre;
+						
+			return $retorno;
 		} catch (Exception $e) {
 			return $e->getMessage();
 		}
