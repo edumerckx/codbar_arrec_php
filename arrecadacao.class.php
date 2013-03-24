@@ -248,7 +248,7 @@ class Arrecadacao {
 		$total = 0;
 		$m = 2;
 		
-		for ($i = 0; $i < strlen($valor); $i++) {
+		for ($i = strlen($valor) - 1; $i >= 0; $i--) {
 			$res = $valor[$i] * $m;
 			$total += (bcdiv($res, 10) + ($res % 10));
 			
@@ -277,6 +277,26 @@ class Arrecadacao {
 	 */
 	private function calculoModulo11($valor) {
 		
+		$total = 0;
+		$m = 2;
+		
+		for ($i = strlen($valor) - 1; $i >=0; $i--) {
+			$total += $valor[$i] * $m;
+			
+			$m++;
+			
+			if ($m == 10) {
+				$m = 2;
+			}
+		}
+		
+		$resto = $total % 11;
+		
+		if ($resto < 2) {
+			$dac = 0;
+		} else {
+			$dac = 11 - $resto;
+		}
 	}
 
 }
