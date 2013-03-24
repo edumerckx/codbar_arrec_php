@@ -158,14 +158,27 @@ class Arrecadacao {
 				$this->dv = substr($this->codigo_barras, 3, 1);
 				
 				// valor
-				$this->valor = bcdiv(substr($this->codigo_barras, 4, 11), 100, 2);
-				
+				$valor = bcdiv(substr($this->codigo_barras, 4, 11), 100, 2);
+				if (in_array($this->indicador_valor, array(8, 9))) {
+					if ($valor > 0) {
+						$this->valor = $valor;
+					} else {
+						throw new Exception('Valor inválido!');
+					}
+				} else {
+					$this->valor = $valor;
+				}
+				 
 				// identificação da empresa
 				// obs.: de acordo com o layout, se usado o código febraban 
 				// este campo terá 4 caracteres, caso contrário será utilizado
 				// os 8 primeiros digitos do CNPJ da empresa, utilizando assim
 				// as 4 primeiras posições do campo livre 
+				// por padrão será utilizado campo com 4 dígitos
 				$this->id_empresa = substr($this->codigo_barras, 15, 4);
+				
+				// campo livre
+				$this->campo_livre = substr($this->codigo_barras, 18, 25);
 			}
 		} catch (Exception $e) {
 			error_log($e->getMessage());
@@ -223,6 +236,47 @@ class Arrecadacao {
 			error_log($e->getMessage());
 			return false;
 		}
+	}
+	
+	/**
+	 * Cálculo de dígito baseado no módulo 10
+	 * 
+	 * @param $valor
+	 */
+	private function calculoModulo10($valor) {
+		
+		$total = 0;
+		$m = 2;
+		
+		for ($i = 0; $i < strlen($valor); $i++) {
+			$res = $valor[$i] * $m;
+			$total += (bcdiv($res, 10) + ($res % 10));
+			
+			if ($m == 2) {
+				$m = 1;
+			} else {
+				$m = 2;
+			}
+		}
+		
+		$resto = $total % 10;
+		
+		if ($resto == 0) {
+			$dac = 0;
+		} else {
+			$dac = 10 - $resto;
+		}
+		
+		return $dac;
+	}
+	
+	/**
+	 * Cálculo de dígito baseado no módulo 11
+	 * 
+	 * @param $valor
+	 */
+	private function calculoModulo11($valor) {
+		
 	}
 
 }
