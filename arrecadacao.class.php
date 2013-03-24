@@ -11,48 +11,63 @@ class Arrecadacao {
 	 * Código de barras para arrecadação
 	 * com 44 posições
 	 *
+	 * @var string $codigo_barras
 	 */
 	private $codigo_barras;
+	
+	/**
+	 * Linha digitável com 48 posições 
+	 *
+	 * @var string $linha_digitavel
+	 */
+	private $linha_digitavel;
 
 	/**
 	 * Produto - sempre 8 para arrecadação
 	 *
+	 * @var string $produto
 	 */
 	private $produto;
 
 	/**
 	 * Segmento
 	 *
+	 * @var string $segmento
 	 */
 	private $segmento;
 
 	/**
 	 * Indicador de valor - efetivo ou referência
 	 *
+	 * @var string $indicador_valor
 	 */
 	private $indicador_valor;
 
 	/**
 	 * Dígito verificador do código de barras
 	 *
+	 * @var int $dv
 	 */
 	private $dv;
 
 	/**
 	 * Valor
 	 *
+	 * @var double $valor
 	 */
 	private $valor;
 
 	/**
 	 * Identificação empresa
 	 *
+	 * @var int $id_empresa
 	 */
 	private $id_empresa;
 
 	/**
 	 * Campo livre - de uso da empresa/orgão
 	 *
+	 * @var string $campo_livre
 	 */
 	private $campo_livre;
 
@@ -60,17 +75,20 @@ class Arrecadacao {
 	 * Lista de segmentos de acordo com
 	 * o layout Febraban
 	 *
+	 * @var array $lista_segmentos
 	 */
 	private $lista_segmentos;
 
 	/**
 	 * Lista de indicadores de valor
 	 *
+	 * @var array $lista_indicadores
 	 */
 	private $lista_indicadores;
 
 
 	/**
+	 * Construtor
 	 *
 	 * @param $codigo_barras
 	 */
@@ -99,6 +117,8 @@ class Arrecadacao {
 		$ind[8] = 'Valor efetivo - Módulo 11';
 		$ind[9] = 'Valor referência - Módulo 11';
 		$this->lista_indicadores = $ind;
+		
+		return $this;
 	}
 
 	/**
@@ -116,6 +136,8 @@ class Arrecadacao {
 			} else {
 				throw new Exception('Código de barras inválido');
 			}
+			
+			return $this;
 		} catch (Exception $e) {
 			error_log($e->getMessage());
 			return false;
@@ -126,13 +148,9 @@ class Arrecadacao {
 	 * Efetua split dos campos do código de barras
 	 *
 	 */
-	public function split($codigo_barras = '') {
+	private function split() {
 
-		try {
-			if ($codigo_barras != '') {
-				self::setCodigoBarras($codigo_barras);
-			}
-			
+		try {			
 			if (self::codigoBarrasValido()) {
 			
 				// produto
@@ -180,6 +198,8 @@ class Arrecadacao {
 				// campo livre
 				$this->campo_livre = substr($this->codigo_barras, 18, 25);
 			}
+			
+			return $this;
 		} catch (Exception $e) {
 			error_log($e->getMessage());
 			return false;
@@ -204,8 +224,37 @@ class Arrecadacao {
 				throw new Exception("Código de barras inválido para arrecadação!");
 			}
 
-			// validar dv...
+			self::split();
+			
+			$dv = $this->codigo_barras[3];
+			$validar = '';
+			for ($i = 0; $i < strlen($this->codigo_barras); $i++) {
+				if ($i != 3) {
+					$validar .= $this->codigo_barras[$i];
+				}	
+			}	
+					
+			if (in_array($this->indicador_valor, array(6, 7))) {
+				// valida pelo módulo 10
+				$val = self::calculoModulo10($validar);
+				
+				if ($val !== $dv) {
+					return false;
+				} 
+				
+				return true;
+			} else if (in_array($this->indicador_valor, array(8, 9))) {
+				// valida pelo módulo 11
+				$val = self::calculoModulo11($validar);
+				
+				if ($val !== $dv) {
+					return false;
+				}
+				
+				return true;
+			}
 
+			return false;
 		} catch (Exception $e) {
 			error_log($e->getMessage());
 			return false;
@@ -237,6 +286,86 @@ class Arrecadacao {
 			return false;
 		}
 	}
+	
+	/**
+	 * Atribui valor para linha_digitavel
+	 * e codigo_barras
+	 * 
+	 * @param $linha_digitavel
+	 */
+	public function setLinhaDigitavel($linha_digitavel) {
+		
+		try {
+			if (is_numeric($linha_digitavel) && strlen($linha_digitavel) == 48) {
+				$this->linha_digitavel = $linha_digitavel;
+				
+				// seta o código de barras
+				$cb = '';
+				for ($i = 0; $i < strlen($linha_digitavel); $i++) {
+					if (!in_array($i, array(11, 23, 35, 47))) {
+						$cb .= $linha_digitavel[$i];
+					}
+				}
+				
+				self::setCodigoBarras($cb);
+			} else {
+				throw new Exception('Linha digitável inválida!');
+			}
+			
+			return $this;
+		} catch (Exception $e) {
+			error_log($e->getMessage());
+			return false;
+		}
+	}
+	
+	/**
+	 * Recupera linha_digitavel
+	 * 
+	 */
+	private function getLinhaDigitavel() {
+		
+		if (!isset($this->linha_digitavel)) {
+			self::gerarLinhaDigitavel();
+		}
+		
+		return $this->linha_digitavel;		
+	}
+	
+	/**
+	 * A partir do codigo de barras gera a linha digitavel
+	 * 
+	 */
+	private function gerarLinhaDigitavel() {
+		
+		if ($this->indicador_valor == 6 || $this->indicador_valor == 7) {
+			$mod = 10;
+		} else {
+			$mod = 11;
+		}
+		
+		$campo1 = substr($this->codigo_barras, 0, 11);
+		$campo2 = substr($this->codigo_barras, 11, 11);
+		$campo3 = substr($this->codigo_barras, 22, 11);
+		$campo4 = substr($this->codigo_barras, 33, 11);
+		
+		if ($mod == 10) {
+			$campo1 = $campo1 . self::calculoModulo10($campo1);
+			$campo2 = $campo2 . self::calculoModulo10($campo2);
+			$campo3 = $campo3 . self::calculoModulo10($campo3);
+			$campo4 = $campo4 . self::calculoModulo10($campo4);
+		} else {
+			$campo1 = $campo1 . self::calculoModulo11($campo1);
+			$campo2 = $campo2 . self::calculoModulo11($campo2);
+			$campo3 = $campo3 . self::calculoModulo11($campo3);
+			$campo4 = $campo4 . self::calculoModulo11($campo4);				
+		}
+		
+		$this->linha_digitavel = $campo1 . $campo2 . $campo3 . $campo4;
+		
+		return $this;
+	}
+	
 	
 	/**
 	 * Cálculo de dígito baseado no módulo 10
@@ -297,6 +426,8 @@ class Arrecadacao {
 		} else {
 			$dac = 11 - $resto;
 		}
+		
+		return $dac;
 	}
 
 }
