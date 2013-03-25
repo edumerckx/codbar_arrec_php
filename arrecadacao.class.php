@@ -14,9 +14,9 @@ class Arrecadacao {
 	 * @var string $codigo_barras
 	 */
 	private $codigo_barras;
-	
+
 	/**
-	 * Linha digitável com 48 posições 
+	 * Linha digitável com 48 posições
 	 *
 	 * @var string $linha_digitavel
 	 */
@@ -32,17 +32,31 @@ class Arrecadacao {
 	/**
 	 * Segmento
 	 *
-	 * @var string $segmento
+	 * @var int $segmento
 	 */
 	private $segmento;
+	
+	/**
+	 * Descrição para segmento
+	 * 
+	 * @var string $segmento_descricao
+	 */
+	private $segmento_descricao;
 
 	/**
 	 * Indicador de valor - efetivo ou referência
 	 *
-	 * @var string $indicador_valor
+	 * @var int $indicador_valor
 	 */
 	private $indicador_valor;
 
+	/**
+	 * Descrição para indicador_valor
+	 * 
+	 * @var string $indicador_descricao
+	 */
+	private $indicador_descricao;
+	
 	/**
 	 * Dígito verificador do código de barras
 	 *
@@ -117,7 +131,7 @@ class Arrecadacao {
 		$ind[8] = 'Valor efetivo - Módulo 11';
 		$ind[9] = 'Valor referência - Módulo 11';
 		$this->lista_indicadores = $ind;
-		
+
 		return $this;
 	}
 
@@ -136,10 +150,10 @@ class Arrecadacao {
 			} else {
 				throw new Exception('Código de barras inválido');
 			}
-			
+				
 			return $this;
 		} catch (Exception $e) {
-			error_log($e->getMessage());
+			echo $e->getMessage();
 			return false;
 		}
 	}
@@ -150,58 +164,57 @@ class Arrecadacao {
 	 */
 	private function split() {
 
-		try {			
-			if (self::codigoBarrasValido()) {
-			
-				// produto
-				$this->produto = substr($this->codigo_barras, 0, 1) . ' - Arrecadação';
-	
-				// segmento
-				$seg = substr($this->codigo_barras, 1, 1);
-				if (array_key_exists($seg, $this->lista_segmentos)) {
-					$this->segmento = $this->lista_segmentos[$seg];
-				} else {
-					throw new Exception('Segmento inválido!');
-				}
-					
-				// indicador de valor
-				$ind = substr($this->codigo_barras, 2, 1);
-				if (array_key_exists($ind, $this->lista_indicadores)) {
-					$this->indicador_valor = $this->lista_indicadores[$ind];
-				} else {
-					throw new Exception('Indicador inválido!');
-				}
-					
-				// dígito verificador
-				$this->dv = substr($this->codigo_barras, 3, 1);
-				
-				// valor
-				$valor = bcdiv(substr($this->codigo_barras, 4, 11), 100, 2);
-				if (in_array($this->indicador_valor, array(8, 9))) {
-					if ($valor > 0) {
-						$this->valor = $valor;
-					} else {
-						throw new Exception('Valor inválido!');
-					}
-				} else {
-					$this->valor = $valor;
-				}
-				 
-				// identificação da empresa
-				// obs.: de acordo com o layout, se usado o código febraban 
-				// este campo terá 4 caracteres, caso contrário será utilizado
-				// os 8 primeiros digitos do CNPJ da empresa, utilizando assim
-				// as 4 primeiras posições do campo livre 
-				// por padrão será utilizado campo com 4 dígitos
-				$this->id_empresa = substr($this->codigo_barras, 15, 4);
-				
-				// campo livre
-				$this->campo_livre = substr($this->codigo_barras, 18, 25);
+		try {
+			// produto
+			$this->produto = substr($this->codigo_barras, 0, 1) . ' - Arrecadação';
+
+			// segmento
+			$seg = substr($this->codigo_barras, 1, 1);
+			if (array_key_exists($seg, $this->lista_segmentos)) {
+				$this->segmento = $seg;
+				$this->segmento_descricao = $this->lista_segmentos[$seg];
+			} else {
+				throw new Exception('Segmento inválido!');
 			}
-			
+				
+			// indicador de valor
+			$ind = substr($this->codigo_barras, 2, 1);
+			if (array_key_exists($ind, $this->lista_indicadores)) {
+				$this->indicador_valor = $ind;
+				$this->indicador_descricao = $this->lista_indicadores[$ind];
+			} else {
+				throw new Exception('Indicador inválido!');
+			}
+				
+			// dígito verificador
+			$this->dv = substr($this->codigo_barras, 3, 1);
+
+			// valor
+			$valor = bcdiv(substr($this->codigo_barras, 4, 11), 100, 2);
+			if (in_array($this->indicador_valor, array(8, 9))) {
+				if ($valor > 0) {
+					$this->valor = $valor;
+				} else {
+					throw new Exception('Valor inválido!');
+				}
+			} else {
+				$this->valor = $valor;
+			}
+				
+			// identificação da empresa
+			// obs.: de acordo com o layout, se usado o código febraban
+			// este campo terá 4 caracteres, caso contrário será utilizado
+			// os 8 primeiros digitos do CNPJ da empresa, utilizando assim
+			// as 4 primeiras posições do campo livre
+			// por padrão será utilizado campo com 4 dígitos
+			$this->id_empresa = substr($this->codigo_barras, 15, 4);
+
+			// campo livre
+			$this->campo_livre = substr($this->codigo_barras, 18, 25);
+				
 			return $this;
 		} catch (Exception $e) {
-			error_log($e->getMessage());
+			echo $e->getMessage();
 			return false;
 		}
 	}
@@ -225,38 +238,38 @@ class Arrecadacao {
 			}
 
 			self::split();
-			
+				
 			$dv = $this->codigo_barras[3];
 			$validar = '';
 			for ($i = 0; $i < strlen($this->codigo_barras); $i++) {
 				if ($i != 3) {
 					$validar .= $this->codigo_barras[$i];
-				}	
-			}	
-					
+				}
+			}
+
 			if (in_array($this->indicador_valor, array(6, 7))) {
 				// valida pelo módulo 10
 				$val = self::calculoModulo10($validar);
-				
-				if ($val !== $dv) {
+
+				if ($val != $dv) {
 					return false;
-				} 
+				}
 				
 				return true;
 			} else if (in_array($this->indicador_valor, array(8, 9))) {
 				// valida pelo módulo 11
 				$val = self::calculoModulo11($validar);
-				
-				if ($val !== $dv) {
+
+				if ($val != $dv) {
 					return false;
 				}
-				
+
 				return true;
 			}
 
 			return false;
 		} catch (Exception $e) {
-			error_log($e->getMessage());
+			echo $e->getMessage();
 			return false;
 		}
 	}
@@ -273,32 +286,52 @@ class Arrecadacao {
 				$retorno = array();
 				$retorno['produto'] = $this->produto;
 				$retorno['segmento'] = $this->segmento;
+				$retorno['segmento_descricao'] = $this->segmento_descricao;
 				$retorno['indicador_valor'] = $this->indicador_valor;
+				$retorno['indicador_descricao'] = $this->indicador_descricao;
 				$retorno['dv'] = $this->dv;
 				$retorno['valor'] = $this->valor;
 				$retorno['id_empresa'] = $this->id_empresa;
 				$retorno['campo_livre'] = $this->campo_livre;
 
 				return $retorno;
-			}
+			} 
 		} catch (Exception $e) {
-			error_log($e->getMessage());
+			echo $e->getMessage();
 			return false;
 		}
 	}
 	
 	/**
+	 * Recupera codigo_barras
+	 * 
+	 */
+	public function getCodigoBarras() {
+		
+		try {
+			if (!isset($this->codigo_barras)) {
+				throw new Exception('Dados não informados!');
+			}
+		
+			return $this->codigo_barras;
+		} catch (Exception $e) {
+			echo $e->getMessage();
+			return false;
+		}
+	}
+
+	/**
 	 * Atribui valor para linha_digitavel
 	 * e codigo_barras
-	 * 
+	 *
 	 * @param $linha_digitavel
 	 */
 	public function setLinhaDigitavel($linha_digitavel) {
-		
+
 		try {
 			if (is_numeric($linha_digitavel) && strlen($linha_digitavel) == 48) {
 				$this->linha_digitavel = $linha_digitavel;
-				
+
 				// seta o código de barras
 				$cb = '';
 				for ($i = 0; $i < strlen($linha_digitavel); $i++) {
@@ -306,49 +339,49 @@ class Arrecadacao {
 						$cb .= $linha_digitavel[$i];
 					}
 				}
-				
+
 				self::setCodigoBarras($cb);
 			} else {
 				throw new Exception('Linha digitável inválida!');
 			}
-			
+				
 			return $this;
 		} catch (Exception $e) {
-			error_log($e->getMessage());
+			echo $e->getMessage();
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Recupera linha_digitavel
-	 * 
+	 *
 	 */
-	private function getLinhaDigitavel() {
-		
+	public function getLinhaDigitavel() {
+
 		if (!isset($this->linha_digitavel)) {
 			self::gerarLinhaDigitavel();
 		}
-		
-		return $this->linha_digitavel;		
+
+		return $this->linha_digitavel;
 	}
-	
+
 	/**
 	 * A partir do codigo de barras gera a linha digitavel
-	 * 
+	 *
 	 */
 	private function gerarLinhaDigitavel() {
-		
+
 		if ($this->indicador_valor == 6 || $this->indicador_valor == 7) {
 			$mod = 10;
 		} else {
 			$mod = 11;
 		}
-		
+
 		$campo1 = substr($this->codigo_barras, 0, 11);
 		$campo2 = substr($this->codigo_barras, 11, 11);
 		$campo3 = substr($this->codigo_barras, 22, 11);
 		$campo4 = substr($this->codigo_barras, 33, 11);
-		
+
 		if ($mod == 10) {
 			$campo1 = $campo1 . self::calculoModulo10($campo1);
 			$campo2 = $campo2 . self::calculoModulo10($campo2);
@@ -358,75 +391,75 @@ class Arrecadacao {
 			$campo1 = $campo1 . self::calculoModulo11($campo1);
 			$campo2 = $campo2 . self::calculoModulo11($campo2);
 			$campo3 = $campo3 . self::calculoModulo11($campo3);
-			$campo4 = $campo4 . self::calculoModulo11($campo4);				
+			$campo4 = $campo4 . self::calculoModulo11($campo4);
 		}
-		
+
 		$this->linha_digitavel = $campo1 . $campo2 . $campo3 . $campo4;
-		
+
 		return $this;
 	}
-	
-	
+
+
 	/**
 	 * Cálculo de dígito baseado no módulo 10
-	 * 
+	 *
 	 * @param $valor
 	 */
 	private function calculoModulo10($valor) {
-		
+
 		$total = 0;
 		$m = 2;
-		
+
 		for ($i = strlen($valor) - 1; $i >= 0; $i--) {
 			$res = $valor[$i] * $m;
 			$total += (bcdiv($res, 10) + ($res % 10));
-			
+				
 			if ($m == 2) {
 				$m = 1;
 			} else {
 				$m = 2;
 			}
 		}
-		
+
 		$resto = $total % 10;
-		
+
 		if ($resto == 0) {
 			$dac = 0;
 		} else {
 			$dac = 10 - $resto;
 		}
-		
+
 		return $dac;
 	}
-	
+
 	/**
 	 * Cálculo de dígito baseado no módulo 11
-	 * 
+	 *
 	 * @param $valor
 	 */
 	private function calculoModulo11($valor) {
-		
+
 		$total = 0;
 		$m = 2;
-		
+
 		for ($i = strlen($valor) - 1; $i >=0; $i--) {
 			$total += $valor[$i] * $m;
-			
+				
 			$m++;
-			
+				
 			if ($m == 10) {
 				$m = 2;
 			}
 		}
-		
+
 		$resto = $total % 11;
-		
+
 		if ($resto < 2) {
 			$dac = 0;
 		} else {
 			$dac = 11 - $resto;
 		}
-		
+
 		return $dac;
 	}
 
